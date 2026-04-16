@@ -8,16 +8,16 @@ export default function Landing() {
   return (
     <div className="living-bg" style={{ minHeight: '100vh', position: 'relative', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Decorative Overlays */}
+      {/* Decorative Overlays 
       <div className="deco-circle deco-1"></div>
-      <div className="deco-line"></div>
+      <div className="deco-line"></div>*/}
 
-      {/* Abstract Shapes */}
+      {/* Abstract Shapes 
       <div className="deco-shape deco-square" style={{ bottom: '25vh', right: '35vw', transform: 'rotate(15deg) scale(0.6)' }}></div>
       <div className="deco-shape deco-cross" style={{ top: '38vh', left: '42vw' }}></div>
       <div className="deco-shape deco-cross" style={{ bottom: '45vh', right: '10vw', transform: 'scale(1.5)' }}></div>
       <div className="deco-shape deco-dot" style={{ top: '25vh', right: '22vw' }}></div>
-      <div className="deco-shape deco-dot" style={{ bottom: '30vh', left: '20vw' }}></div>
+      <div className="deco-shape deco-dot" style={{ bottom: '30vh', left: '20vw' }}></div>*/}
       
       <div style={{ position: 'absolute', top: '40px', right: '40px', zIndex: 10 }}>
         <button

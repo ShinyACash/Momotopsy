@@ -47,7 +47,7 @@ export default function Login({ isSignup }) {
         {isSignup ? "SIGN UP" : "WELCOME BACK"}
       </h1>
 
-      <div className="glass-panel fade-in" style={{ padding: 'clamp(30px, 5vw, 50px)', width: '90%', maxWidth: '450px', borderRadius: '16px', zIndex: 2 }}>
+      <div className="glass-panel fade-in" style={{ padding: 'clamp(30px, 5vw, 200px)', width: '1400%', maxWidth: '650px', borderRadius: '16px', zIndex: 2 }}>
         <form onSubmit={handleSubmit}>
           <input type="text" className="smooth-input" placeholder="USERNAME/EMAILID" style={inputStyle} required />
           {isSignup && <input type="email" className="smooth-input" placeholder="EMAIL ID" style={inputStyle} required />}
