@@ -37,15 +37,35 @@ def test_api(file_path):
                 for e in events:
                     print(f"  - [{e['event_type']}] {e['deadline_date']}: {e['description']}")
             
-            print("\nFLAGED CLAUSES & NEGOTIATION TEST:")
-            predatory_nodes = [n for n in data.get('graph', {}).get('nodes', []) if n.get('label') == 'Predatory']
+            print("\nCLAUSE-BY-CLAUSE RISK ANALYSIS:")
+            print("=" * 90)
+            print(f"  {'#':<4} {'VERDICT':<12} {'RISK %':<10} CLAUSE")
+            print("=" * 90)
+            
+            all_nodes = data.get('graph', {}).get('nodes', [])
+            # Sort by node id (e.g., clause_10 should come after clause_2)
+            all_nodes.sort(key=lambda n: int(n['id'].split('_')[1]) if '_' in n.get('id', '') else 0)
+            
+            for i, node in enumerate(all_nodes, 1):
+                label = "[naur] PREDATORY" if node.get('label') == 'Predatory' else "[yay] SAFE"
+                risk_pct = node.get('risk_score', 0) * 100
+                text = node.get('text', '')
+                truncated = text if len(text) <= 55 else text[:52] + "..."
+                # Fix for Windows console encoding issues (e.g. Rupee symbol)
+                truncated = truncated.encode('ascii', 'ignore').decode('ascii')
+                print(f"  {i:<4} {label:<12} {risk_pct:>6.1f}%    {truncated}")
+            
+            print("=" * 90)
+            
+            print("\nDETAILED PREDATORY ANALYSIS & NEGOTIATION KIT:")
+            predatory_nodes = [n for n in all_nodes if n.get('label') == 'Predatory']
             
             if not predatory_nodes:
                 print("  (No predatory clauses detected in this document)")
             
             for node in predatory_nodes:
                 print("-" * 50)
-                print(f"Text: {node.get('text')[:100]}...")
+                print(f"Text Snippet: {node.get('text')[:100]}...")
                 print(f"Risk: {node.get('risk_score')} | Reason: {node.get('reason_flagged')}")
                 
                 # --- TEST NEGOTIATION KIT ---
@@ -56,11 +76,14 @@ def test_api(file_path):
                     "improved_text": node.get("improved_clause"),
                     "document_type": "Uncategorized Contract"
                 }
-                neg_resp = httpx.post("http://localhost:8000/api/negotiate", json=neg_payload, timeout=30.0)
-                if neg_resp.status_code == 200:
-                    print(f"Negotiation Generated: {neg_resp.json().get('email_subject')}")
-                else:
-                    print(f"Negotiation Failed: {neg_resp.status_code}")
+                try:
+                    neg_resp = httpx.post("http://localhost:8000/api/negotiate", json=neg_payload, timeout=30.0)
+                    if neg_resp.status_code == 200:
+                        print(f"Negotiation Generated: {neg_resp.json().get('email_subject')}")
+                    else:
+                        print(f"Negotiation Failed: {neg_resp.status_code}")
+                except Exception as e:
+                    print(f"Negotiation Request Error: {e}")
 
             # --- CHECK SCAM RADAR ---
             print("\n--- STEP 2: Checking Scam Radar Leaderboard... ---")
