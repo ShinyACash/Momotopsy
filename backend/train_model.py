@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 import joblib
+import os
 import numpy as np
 import pandas as pd
 from datasets import concatenate_datasets, load_dataset
 from imblearn.combine import SMOTETomek
 from sentence_transformers import SentenceTransformer
+import matplotlib.pyplot as plt
 from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+)
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
 
-_MODEL_NAME: str = "all-MiniLM-L6-v2"
+_MODEL_NAME: str = "all-mpnet-base-v2"
 _EXPORT_PATH: str = "momotopsy_risk_model.pkl"
 _TEST_SIZE: float = 0.20
 _RANDOM_STATE: int = 42
@@ -217,13 +224,24 @@ def main() -> None:
     print(f"\nLoading SentenceTransformer ({_MODEL_NAME})...")
     model = SentenceTransformer(_MODEL_NAME)
 
-    print("Encoding vectors (this may take a minute)...")
-    X = model.encode(
-        df["text"].tolist(),
-        show_progress_bar=True,
-        convert_to_numpy=True,
-    )
-    y = df["is_predatory"].values
+    X_CACHE = "embeddings_cache.npy"
+    Y_CACHE = "labels_cache.npy"
+
+    if os.path.exists(X_CACHE) and os.path.exists(Y_CACHE):
+        print(f"Loading cached embeddings from {X_CACHE}...")
+        X = np.load(X_CACHE)
+        y = np.load(Y_CACHE)
+    else:
+        print("Encoding vectors (this may take a few minutes)...")
+        X = model.encode(
+            df["text"].tolist(),
+            show_progress_bar=True,
+            convert_to_numpy=True,
+        )
+        y = df["is_predatory"].values
+        print(f"Saving embeddings to cache...")
+        np.save(X_CACHE, X)
+        np.save(Y_CACHE, y)
 
     print(f"    Embedding matrix shape: {X.shape}")
 
@@ -240,16 +258,37 @@ def main() -> None:
     safe_count = len(y_train_resampled) - pred_count
     print(f"    After SMOTETomek: {len(X_train_resampled)}  (Safe: {safe_count}, Predatory: {pred_count})")
 
-    print("Training HistGradientBoostingClassifier...")
-    clf = HistGradientBoostingClassifier(
+    print("Tuning HistGradientBoostingClassifier with RandomizedSearchCV...")
+    base_clf = HistGradientBoostingClassifier(
         max_iter=500,
-        learning_rate=0.05,
-        max_depth=6,
-        min_samples_leaf=10,
         class_weight="balanced",
         random_state=_RANDOM_STATE,
     )
-    clf.fit(X_train_resampled, y_train_resampled)
+    
+    param_dist = {
+        "learning_rate": [0.01, 0.05, 0.1],
+        "max_depth": [4, 6, 8, None],
+        "min_samples_leaf": [5, 10, 20],
+        "l2_regularization": [0.0, 0.1, 1.0],
+        "max_bins": [128, 255],
+    }
+    
+    # 5-fold CV with 10 random iterations 
+    search = RandomizedSearchCV(
+        base_clf,
+        param_distributions=param_dist,
+        n_iter=10,
+        cv=3,  # 3-fold to speed up slightly
+        scoring="f1_macro",
+        n_jobs=-1,
+        random_state=_RANDOM_STATE,
+        verbose=1,
+    )
+    
+    search.fit(X_train_resampled, y_train_resampled)
+    clf = search.best_estimator_
+    
+    print(f"Best params found: {search.best_params_}")
     print("Training complete.")
 
     print("\nEvaluating on test set...")
@@ -264,6 +303,18 @@ def main() -> None:
     print(f"Exporting model -> {_EXPORT_PATH}")
     joblib.dump(clf, _EXPORT_PATH)
     print("Model saved successfully.\n")
+
+    print("Generating Confusion Matrix...")
+    cm = confusion_matrix(y_test, y_pred)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Safe", "Predatory"])
+    
+    fig, ax = plt.subplots(figsize=(8, 6))
+    disp.plot(ax=ax, cmap="Blues", values_format="d")
+    plt.title(f"Momotopsy Risk Model: Confusion Matrix (Recall focus)")
+    
+    plot_path = "confusion_matrix_train.png"
+    plt.savefig(plot_path)
+    print(f"Confusion matrix plot saved to {plot_path}")
 
 
 if __name__ == "__main__":

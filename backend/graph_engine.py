@@ -13,10 +13,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from llm_fixer import ClauseFixer
 
-_MODEL_NAME: str = "all-MiniLM-L6-v2"
+_MODEL_NAME: str = "all-mpnet-base-v2"
 _CLF_PATH: str = str(Path(__file__).with_name("momotopsy_risk_model.pkl"))
 _SIMILARITY_THRESHOLD: float = 0.65
-_RISK_THRESHOLD: float = 0.25
+_RISK_THRESHOLD: float = 0.15
 
 
 class LegalGraphBuilder:

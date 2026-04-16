@@ -8,7 +8,8 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 _MODEL_PATH: str = "momotopsy_risk_model.pkl"
-_ENCODER_NAME: str = "all-MiniLM-L6-v2"
+_ENCODER_NAME: str = "all-mpnet-base-v2"
+_RISK_THRESHOLD: float = 0.15
 
 MOCK_CLAUSES: list[str] = [
     "The tenant agrees to pay rent on the 1st of each month.",
@@ -42,8 +43,10 @@ def main() -> None:
     print(f"Encoding {len(MOCK_CLAUSES)} mock clauses...\n")
     embeddings = encoder.encode(MOCK_CLAUSES, convert_to_numpy=True, show_progress_bar=False)
 
-    predictions = clf.predict(embeddings)
+    # predictions = clf.predict(embeddings) 
     probabilities = clf.predict_proba(embeddings)
+    risk_scores = probabilities[:, 1]
+    predictions = (risk_scores >= _RISK_THRESHOLD).astype(int)
 
     print("=" * 90)
     print(f"  {'#':<4} {'VERDICT':<12} {'RISK %':<10} CLAUSE")
