@@ -77,3 +77,68 @@ class ClauseFixer:
                 "LLM analysis failed for clause: %.80s — %s", text, exc,
             )
             return dict(_EMPTY_RESULT)
+
+    async def generate_negotiation_doc(self, original_clause: str, improved_clause: str, doc_type: str) -> dict[str, str]:
+        """Generate a polite but firm legal negotiation email to demand the improved clause."""
+        prompt = (
+            f"You are a highly professional, polite, but extremely firm legal advocate. "
+            f"The user is preparing to negotiate a predatory clause found in their {doc_type}.\n\n"
+            f"Predatory Clause:\n{original_clause}\n\n"
+            f"Improved, Fair Clause:\n{improved_clause}\n\n"
+            "Task: Generate an assertive email template to send to the opposing party (e.g. landlord, employer, company) "
+            "requesting the removal of the toxic clause and the implementation of the fair clause. "
+            "Explicitly cite why the original clause is unreasonable and present the improved clause as the standard industry alternative. "
+            "Leave [bracketed] placeholders for names.\n\n"
+            "Output ONLY a JSON object matching this exact schema:\n"
+            '{"email_subject": "...", "email_body": "..."}'
+        )
+        
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=800,
+            )
+            import json
+            raw: str = response.choices[0].message.content or "{}"
+            result = json.loads(raw)
+            return {
+                "email_subject": result.get("email_subject", "Contract Negotiation Request"),
+                "email_body": result.get("email_body", "Error parsing LLM output.")
+            }
+        except Exception as exc:
+            logger.warning("Generation failed for negotiation doc: %s", exc)
+            return {
+                "email_subject": "Contract Clarification Requested",
+                "email_body": "System timed out communicating with AI services. Please manually request the clause change."
+            }
+
+    async def extract_lifecycle_events(self, document_text: str) -> list[dict]:
+        """Extract explicit deadlines and contractual milestone dates."""
+        prompt = (
+            "You are a contract analysis AI. Review the following complete document text and extract all explicit or implicit deadlines, lifecycle events, and critical dates (e.g., Expiration, Auto-Renewal, Term Start, Payment Due, Contract Termination, Intern End Date, KYC Request).\n\n"
+            "Output ONLY a JSON object containing a 'deadlines' list array matching this schema exactly:\n"
+            '{"deadlines": [{"event_type": "Auto-Renewal", "date_str": "YYYY-MM-DD", "description": "The contract will automatically renew if not cancelled."}]}\n\n'
+            "If no clear dates exist or cannot be parsed into YYYY-MM-DD format based on context, return {'deadlines': []}. "
+            "Never make up a date. Use your best contextual guess if a year is implicit.\n\n"
+            f"Document Text:\n{document_text[:20000]}"
+        )
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "system", "content": prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.1,
+                max_tokens=800,
+            )
+            import json
+            raw: str = response.choices[0].message.content or "{}"
+            result = json.loads(raw)
+            return result.get("deadlines", [])
+        except Exception as exc:
+            logger.warning("Failed to extract lifecycle events: %s", exc)
+            return []

@@ -74,12 +74,10 @@ class DocumentIngester:
                     
                     # Run OCR on the extracted image bytes
                     reader = _get_ocr_reader()
-                    results = reader.readtext(image_bytes, detail=0)
+                    results = reader.readtext(image_bytes, detail=0, paragraph=True)
                     if results:
-                        joined_text = " ".join(results)
-                        # Split by period/punctuation to form semantic clauses instead of blind lines
-                        for sentence in re.split(r'(?<=[.!?])\s+', joined_text):
-                            text = _normalize(sentence)
+                        for text_block in results:
+                            text = _normalize(text_block)
                             if len(text) > 15:  # Ignore tiny fragments
                                 clauses.append(text)
                             
@@ -98,12 +96,11 @@ class DocumentIngester:
     @staticmethod
     def _extract_image(data: bytes) -> list[str]:
         reader = _get_ocr_reader()
-        results = reader.readtext(data, detail=0)
+        results = reader.readtext(data, detail=0, paragraph=True)
         clauses: list[str] = []
         if results:
-            joined_text = " ".join(results)
-            for sentence in re.split(r'(?<=[.!?])\s+', joined_text):
-                text = _normalize(sentence)
+            for text_block in results:
+                text = _normalize(text_block)
                 if len(text) > 15:
                     clauses.append(text)
         return clauses
