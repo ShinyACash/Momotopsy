@@ -6,6 +6,7 @@ Momotopsy is a premium AI-powered legal forensics platform designed to detect, a
 
 ---
 
+
 ## ◈ Core Capabilities
 
 ### 1. Forensic Ingestion & Analysis
@@ -67,4 +68,4 @@ npm run dev
 ## ◈ The Design Philosophy
 Momotopsy utilizes a **Modern Antique** aesthetic. We believe legal analysis shouldn't feel like a sterile spreadsheet—it should feel like a forensic investigation. The UI combines parchment tones, bronze accents, and deep ink-washes with cutting-edge glassmorphism and responsive layouts.
 
-**Because signing should feel like a choice, not a trap.**
+**Because signing should feel like a choice, not a trap.**
